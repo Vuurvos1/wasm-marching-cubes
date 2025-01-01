@@ -41,6 +41,7 @@
 		"vitest": "^2.0.4"
 	},
 	"dependencies": {
-		"three": "^0.172.0"
+		"three": "^0.172.0",
+		"three-viewport-gizmo": "^2.0.2"
 	}
 }
