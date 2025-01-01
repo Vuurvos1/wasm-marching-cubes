@@ -5,6 +5,8 @@
 	import { marching_cubes } from '$lib/wasm/marching_cubes/marching_cubes';
 	import { onMount } from 'svelte';
 
+	import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
+
 	let canvas: HTMLCanvasElement;
 
 	let meshTime = $state(0);
@@ -12,7 +14,7 @@
 	function generateGeometry() {
 		const startTime = performance.now();
 
-		const { vertices, indices, colors, normals } = marching_cubes(meshTime);
+		const { vertices, indices, colors, normals } = marching_cubes(48);
 		const geometry = new THREE.BufferGeometry();
 		geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3, false));
 		geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
@@ -58,6 +60,7 @@
 		const geometry = generateGeometry();
 
 		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+		// const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, wireframe: true });
 		// const material = new THREE.MeshBasicMaterial({ vertexColors: true });
 		// const material = new THREE.MeshNormalMaterial();
 		// material.side = THREE.DoubleSide; // disable backface culling
@@ -66,6 +69,13 @@
 		cube.scale.set(2, 2, 2);
 
 		scene.add(cube);
+
+		// vanilla marching cubes
+		const effect = new MarchingCubes(48, material, false, false, 100000);
+		effect.addBall(0.5, 0.5, 0.5, 15, 0);
+		effect.update();
+		effect.translateX(-2);
+		scene.add(effect);
 
 		const grid = new THREE.GridHelper(10, 10, 0xffffff, 0x555555);
 		scene.add(grid);

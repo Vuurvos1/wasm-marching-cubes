@@ -35,8 +35,8 @@ impl GridData {
 }
 
 #[wasm_bindgen]
-pub fn marching_cubes(size: f32) -> GridData {
-    let resolution = 32;
+pub fn marching_cubes(size: i32) -> GridData {
+    let resolution = size;
     let grid_size = 1.0 / resolution as f32;
     let half_res = resolution / 2;
 

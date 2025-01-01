@@ -12,7 +12,8 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run",
+		"test": "pnpm test:unit -- --run",
+		"bench": "vitest bench",
 		"build:rust": "cargo build --manifest-path ./marching_cubes/Cargo.toml --release --target wasm32-unknown-unknown",
 		"build:bindgen": "wasm-bindgen ./marching_cubes/target/wasm32-unknown-unknown/release/marching_cubes.wasm --out-dir ./src/lib/wasm/marching_cubes",
 		"build:wasm": "pnpm build:rust && pnpm build:bindgen"
