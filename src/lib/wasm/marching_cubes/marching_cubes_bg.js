@@ -142,6 +142,22 @@ export class GridData {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
     }
+    /**
+     * @returns {Float32Array}
+     */
+    get normals() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.griddata_normals(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var v1 = getArrayF32FromWasm0(r0, r1).slice();
+            wasm.__wbindgen_export_0(r0, r1 * 4, 4);
+            return v1;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
 }
 
 export function __wbindgen_throw(arg0, arg1) {

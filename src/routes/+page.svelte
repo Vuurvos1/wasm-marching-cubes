@@ -12,16 +12,15 @@
 	function generateGeometry() {
 		const startTime = performance.now();
 
-		const { vertices, indices, colors } = marching_cubes(meshTime);
+		const { vertices, indices, colors, normals } = marching_cubes(meshTime);
 		const geometry = new THREE.BufferGeometry();
 		geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3, false));
 		geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
 		geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
-		geometry.computeVertexNormals();
+		geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
+		console.log('vertices', vertices.length / 3); // 28536
 
-		// const material = new THREE.MeshBasicMaterial({ vertexColors: true });
-		// const mesh = new THREE.Mesh(geometry, material);
-		// mesh.scale.set(2, 2, 2);
+		// geometry.computeVertexNormals();
 
 		const endTime = performance.now();
 		meshTime = endTime - startTime;
@@ -59,7 +58,9 @@
 		const geometry = generateGeometry();
 
 		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-		material.side = THREE.DoubleSide; // disable backface culling
+		// const material = new THREE.MeshBasicMaterial({ vertexColors: true });
+		// const material = new THREE.MeshNormalMaterial();
+		// material.side = THREE.DoubleSide; // disable backface culling
 
 		const cube = new THREE.Mesh(geometry, material);
 		cube.scale.set(2, 2, 2);
@@ -79,7 +80,7 @@
 		function animate() {
 			frame = requestAnimationFrame(animate);
 
-			generateGeometry();
+			// generateGeometry();
 
 			// Render the scene
 			renderer.render(scene, camera);

@@ -7,4 +7,5 @@ export class GridData {
   readonly vertices: Float32Array;
   readonly indices: Uint32Array;
   readonly colors: Float32Array;
+  readonly normals: Float32Array;
 }
