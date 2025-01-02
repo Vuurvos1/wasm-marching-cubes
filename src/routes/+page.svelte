@@ -7,6 +7,8 @@
 
 	import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
 
+	const resolution = 24;
+
 	let canvas: HTMLCanvasElement;
 
 	let meshTime = $state(0);
@@ -14,7 +16,7 @@
 	function generateGeometry() {
 		const startTime = performance.now();
 
-		const { vertices, indices, colors, normals } = marching_cubes(48);
+		const { vertices, indices, colors, normals } = marching_cubes(resolution);
 		const geometry = new THREE.BufferGeometry();
 		geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3, false));
 		geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
@@ -59,8 +61,8 @@
 		// Generate marching cubes geometry
 		const geometry = generateGeometry();
 
-		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-		// const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, wireframe: true });
+		// const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, wireframe: true });
 		// const material = new THREE.MeshBasicMaterial({ vertexColors: true });
 		// const material = new THREE.MeshNormalMaterial();
 		// material.side = THREE.DoubleSide; // disable backface culling
@@ -71,10 +73,11 @@
 		scene.add(cube);
 
 		// vanilla marching cubes
-		const effect = new MarchingCubes(48, material, false, false, 100000);
-		effect.addBall(0.5, 0.5, 0.5, 15, 0);
+		const effect = new MarchingCubes(resolution + 2, material, false, false, 100000);
+		effect.addBall(0.5, 0.5, 0.5, 14, 0);
 		effect.update();
 		effect.translateX(-2);
+		console.info('three vertices', effect.geometry.attributes.position.count);
 		scene.add(effect);
 
 		const grid = new THREE.GridHelper(10, 10, 0xffffff, 0x555555);
