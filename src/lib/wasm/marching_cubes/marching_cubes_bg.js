@@ -102,15 +102,28 @@ function passArrayJsValueToWasm0(array, malloc) {
     return ptr;
 }
 /**
- * @param {number} size
+ * @param {number} resolution
  * @param {(Metaball)[]} metaballs
  * @param {number} threshold
  * @returns {GridData}
  */
-export function marching_cubes(size, metaballs, threshold) {
+export function marching_cubes(resolution, metaballs, threshold) {
     const ptr0 = passArrayJsValueToWasm0(metaballs, wasm.__wbindgen_export_1);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.marching_cubes(size, ptr0, len0, threshold);
+    const ret = wasm.marching_cubes(resolution, ptr0, len0, threshold);
+    return GridData.__wrap(ret);
+}
+
+/**
+ * @param {number} resolution
+ * @param {(Metaball)[]} metaballs
+ * @param {number} threshold
+ * @returns {GridData}
+ */
+export function visualize_sdf(resolution, metaballs, threshold) {
+    const ptr0 = passArrayJsValueToWasm0(metaballs, wasm.__wbindgen_export_1);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.visualize_sdf(resolution, ptr0, len0, threshold);
     return GridData.__wrap(ret);
 }
 

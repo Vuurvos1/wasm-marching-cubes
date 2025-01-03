@@ -2,43 +2,85 @@
 	import * as THREE from 'three';
 	import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 	import { ViewportGizmo } from 'three-viewport-gizmo';
-	import { marching_cubes, Metaball } from '$lib/wasm/marching_cubes/marching_cubes';
+	import { Pane, Slider } from 'svelte-tweakpane-ui';
+	import { marching_cubes, visualize_sdf, Metaball } from '$lib/wasm/marching_cubes/marching_cubes';
 	import { onMount } from 'svelte';
 
 	import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
 
-	const resolution = 24;
-
 	let canvas: HTMLCanvasElement;
 
-	let meshTime = $state(0);
+	let resolution = $state(24);
+	let threshold = $state(1.5);
 
-	function generateGeometry() {
-		const startTime = performance.now();
+	let ballSize = $state(0.5);
+	let ballStrength = $state(2.5);
+
+	let scene: THREE.Scene | undefined = $state();
+
+	// visualize sdf
+	$effect(() => {
+		if (!scene) return;
+
+		const sdfPoints = scene.getObjectByName('sdfPoints');
+		if (sdfPoints) {
+			scene.remove(sdfPoints);
+		}
 
 		const balls: Metaball[] = [
-			new Metaball(0.25, 0.25, 0.25, 0.65, 1.25),
-			new Metaball(-0.25, -0.25, -0.25, 0.65, 1.25)
+			new Metaball(0.25, 0.25, 0.25, ballSize, ballStrength),
+			new Metaball(-0.25, -0.25, -0.25, ballSize, ballStrength)
 		];
 
-		const { vertices, indices, normals } = marching_cubes(resolution, balls, 1.55);
+		const { vertices } = visualize_sdf(resolution, balls, threshold);
+		const sdfGeometry = new THREE.BufferGeometry();
+		sdfGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3, false));
+
+		const sdfMaterial = new THREE.PointsMaterial({ size: 0.02 });
+		const newSdfPoints = new THREE.Points(sdfGeometry, sdfMaterial);
+		newSdfPoints.name = 'sdfPoints';
+		newSdfPoints.translateX(2);
+
+		scene.add(newSdfPoints);
+	});
+
+	// marching cubes
+	$effect(() => {
+		if (!scene) return;
+
+		const cube = scene.getObjectByName('marchingCubes');
+		if (cube) {
+			scene.remove(cube);
+		}
+
+		const balls: Metaball[] = [
+			new Metaball(0.25, 0.25, 0.25, ballSize, ballStrength),
+			new Metaball(-0.25, -0.25, -0.25, ballSize, ballStrength)
+		];
+
+		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+		// const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, wireframe: true });
+		// const material = new THREE.MeshNormalMaterial();
+
+		console.time('marching cubes');
+		const { vertices, indices, normals } = marching_cubes(resolution, balls, threshold);
+		console.timeEnd('marching cubes');
 		const geometry = new THREE.BufferGeometry();
 		geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3, false));
 		geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
 		geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
-		console.log('vertices', vertices.length / 3); // 28536
+		console.log('vertices', vertices.length / 3);
 
-		// geometry.computeVertexNormals();
+		const newCube = new THREE.Mesh(geometry, material);
+		newCube.scale.set(2, 2, 2);
+		newCube.name = 'marchingCubes';
 
-		const endTime = performance.now();
-		meshTime = endTime - startTime;
-
-		return geometry;
-	}
+		scene.add(newCube);
+	});
 
 	onMount(() => {
 		// Create the scene
-		const scene = new THREE.Scene();
+		scene = new THREE.Scene();
 		scene.background = new THREE.Color(0x333333);
 
 		// Add lighting
@@ -62,19 +104,8 @@
 		const renderer = new THREE.WebGLRenderer({ canvas });
 		renderer.setSize(window.innerWidth, window.innerHeight);
 
-		// Generate marching cubes geometry
-		const geometry = generateGeometry();
-
-		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-		// const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, wireframe: true });
-		// const material = new THREE.MeshNormalMaterial();
-
-		const cube = new THREE.Mesh(geometry, material);
-		cube.scale.set(2, 2, 2);
-
-		scene.add(cube);
-
 		// vanilla marching cubes
+		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
 		const effect = new MarchingCubes(resolution + 2, material, false, false, 100000);
 		effect.addBall(0.25, 0.25, 0.25, 9, 1);
 		effect.addBall(0.75, 0.75, 0.75, 9, 1);
@@ -96,10 +127,8 @@
 		function animate() {
 			frame = requestAnimationFrame(animate);
 
-			// generateGeometry();
-
 			// Render the scene
-			renderer.render(scene, camera);
+			if (scene) renderer.render(scene, camera);
 			gizmo.render();
 		}
 
@@ -130,9 +159,46 @@
 	<title>Marching cubes</title>
 </svelte:head>
 
+<Pane position="draggable" x={24} y={1000}>
+	<Slider
+		min={8}
+		max={64}
+		step={1}
+		format={(v) => v.toFixed(0)}
+		label="Resolution"
+		bind:value={resolution}
+	></Slider>
+
+	<Slider
+		min={-2}
+		max={2}
+		step={0.01}
+		format={(v) => v.toFixed(2)}
+		label="Threshold"
+		bind:value={threshold}
+	></Slider>
+
+	<Slider
+		min={0}
+		max={1}
+		step={0.01}
+		format={(v) => v.toFixed(2)}
+		label="Size"
+		bind:value={ballSize}
+	></Slider>
+
+	<Slider
+		min={0}
+		max={50}
+		step={0.01}
+		format={(v) => v.toFixed(2)}
+		label="Strength"
+		bind:value={ballStrength}
+	></Slider>
+</Pane>
+
 <canvas bind:this={canvas} class="absolute -z-10 block h-screen w-screen"></canvas>
 
 <div class="p-3 text-white">
 	<h1 class="font-semi-bold text-xl">WASM marching cubes</h1>
-	<!-- <pre>Mesh time: {(meshTime / 1000).toFixed(3)}s</pre> -->
 </div>

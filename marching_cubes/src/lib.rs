@@ -51,9 +51,28 @@ impl GridData {
     }
 }
 
+fn scalar_field(x: f32, y: f32, z: f32, metaballs: &Box<[Metaball]>) -> f32 {
+    metaballs.iter().fold(0.0, |sum, ball| {
+        let dx = x - ball.x;
+        let dy = y - ball.y;
+        let dz = z - ball.z;
+        let distance_squared = dx * dx + dy * dy + dz * dz;
+
+        // Hermite cubic interpolation for blending
+        let influence = ball.influence / (distance_squared + ball.radius);
+        let normalized_distance = (distance_squared / ball.radius).sqrt().min(1.0); // Clamp to [0, 1]
+        let smooth_factor = 1.0
+            - normalized_distance
+                * normalized_distance
+                * normalized_distance
+                * (normalized_distance * (normalized_distance * 6.0 - 15.0) + 10.0);
+
+        sum + influence * smooth_factor
+    })
+}
+
 #[wasm_bindgen]
-pub fn marching_cubes(size: i32, metaballs: Box<[Metaball]>, threshold: f32) -> GridData {
-    let resolution = size;
+pub fn marching_cubes(resolution: i32, metaballs: Box<[Metaball]>, threshold: f32) -> GridData {
     let grid_size = 1.0 / resolution as f32;
     let half_res = resolution / 2;
 
@@ -61,21 +80,16 @@ pub fn marching_cubes(size: i32, metaballs: Box<[Metaball]>, threshold: f32) -> 
     let mut indices = Vec::new();
     let mut normals: Vec<f32> = Vec::new();
 
-    let scalar_field = |x: f32, y: f32, z: f32| -> f32 {
-        metaballs.iter().fold(0.0, |sum, ball| {
-            let dx = x - ball.x;
-            let dy = y - ball.y;
-            let dz = z - ball.z;
-            let distance_squared = dx * dx + dy * dy + dz * dz;
-            sum + ball.influence / (1.0 + distance_squared / (ball.radius * ball.radius))
-        })
-    };
-
     let compute_gradient = |x: f32, y: f32, z: f32| -> (f32, f32, f32) {
-        let delta = 0.01; // Step size for finite differences
-        let dx = scalar_field(x + delta, y, z) - scalar_field(x - delta, y, z);
-        let dy = scalar_field(x, y + delta, z) - scalar_field(x, y - delta, z);
-        let dz = scalar_field(x, y, z + delta) - scalar_field(x, y, z - delta);
+        let delta = 0.001; // Step size for finite differences
+
+        let dx =
+            scalar_field(x + delta, y, z, &metaballs) - scalar_field(x - delta, y, z, &metaballs);
+        let dy =
+            scalar_field(x, y + delta, z, &metaballs) - scalar_field(x, y - delta, z, &metaballs);
+        let dz =
+            scalar_field(x, y, z + delta, &metaballs) - scalar_field(x, y, z - delta, &metaballs);
+
         let magnitude = (dx * dx + dy * dy + dz * dz).sqrt();
         (-dx / magnitude, -dy / magnitude, -dz / magnitude) // Flip direction
     };
@@ -132,7 +146,8 @@ pub fn marching_cubes(size: i32, metaballs: Box<[Metaball]>, threshold: f32) -> 
                 // Compute scalar field values at corners
                 let mut corner_values = [0.0; 8];
                 for i in 0..8 {
-                    corner_values[i] = scalar_field(corners[i].0, corners[i].1, corners[i].2);
+                    corner_values[i] =
+                        scalar_field(corners[i].0, corners[i].1, corners[i].2, &metaballs);
                 }
 
                 // Determine cube index using the scalar field values
@@ -203,5 +218,44 @@ pub fn marching_cubes(size: i32, metaballs: Box<[Metaball]>, threshold: f32) -> 
         vertices,
         indices,
         normals,
+    }
+}
+
+#[wasm_bindgen]
+pub fn visualize_sdf(resolution: f32, metaballs: Box<[Metaball]>, threshold: f32) -> GridData {
+    let mut vertices = Vec::new();
+    let indices = Vec::new();
+
+    // render a small quad with a vertex color based on the sdf value
+    let grid_size = 1.0 / resolution as f32;
+    let half_res = (resolution / 2.0) as i32;
+
+    for x in -half_res..half_res {
+        for y in -half_res..half_res {
+            for z in -half_res..half_res {
+                let sdf = scalar_field(
+                    x as f32 * grid_size,
+                    y as f32 * grid_size,
+                    z as f32 * grid_size,
+                    &metaballs,
+                );
+
+                if sdf < threshold {
+                    continue;
+                }
+
+                vertices.extend_from_slice(&[
+                    x as f32 * grid_size,
+                    y as f32 * grid_size,
+                    z as f32 * grid_size,
+                ]);
+            }
+        }
+    }
+
+    GridData {
+        vertices,
+        indices,
+        normals: Vec::new(),
     }
 }

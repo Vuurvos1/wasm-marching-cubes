@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
-export function marching_cubes(size: number, metaballs: (Metaball)[], threshold: number): GridData;
+export function marching_cubes(resolution: number, metaballs: (Metaball)[], threshold: number): GridData;
+export function visualize_sdf(resolution: number, metaballs: (Metaball)[], threshold: number): GridData;
 export class GridData {
   private constructor();
   free(): void;
