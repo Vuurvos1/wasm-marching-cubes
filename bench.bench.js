@@ -1,12 +1,13 @@
 import { bench } from 'vitest';
 import * as THREE from 'three';
 import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
-import { marching_cubes } from './src/lib/wasm/marching_cubes/marching_cubes';
+import { marching_cubes, Metaball } from './src/lib/wasm/marching_cubes/marching_cubes';
 
 const resolution = 48;
 
 bench('wasm marching cubes', () => {
-	marching_cubes(resolution - 2);
+	const ball = new Metaball(0, 0, 0, 0.5, 1);
+	marching_cubes(resolution, [ball]);
 });
 
 bench('three marching cubes', () => {

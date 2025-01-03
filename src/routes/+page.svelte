@@ -2,7 +2,7 @@
 	import * as THREE from 'three';
 	import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 	import { ViewportGizmo } from 'three-viewport-gizmo';
-	import { marching_cubes } from '$lib/wasm/marching_cubes/marching_cubes';
+	import { marching_cubes, Metaball } from '$lib/wasm/marching_cubes/marching_cubes';
 	import { onMount } from 'svelte';
 
 	import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
@@ -16,11 +16,15 @@
 	function generateGeometry() {
 		const startTime = performance.now();
 
-		const { vertices, indices, colors, normals } = marching_cubes(resolution);
+		const balls: Metaball[] = [
+			new Metaball(0.25, 0.25, 0.25, 0.65, 1.25),
+			new Metaball(-0.25, -0.25, -0.25, 0.65, 1.25)
+		];
+
+		const { vertices, indices, normals } = marching_cubes(resolution, balls, 1.55);
 		const geometry = new THREE.BufferGeometry();
 		geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3, false));
 		geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
-		geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
 		geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
 		console.log('vertices', vertices.length / 3); // 28536
 
@@ -61,11 +65,9 @@
 		// Generate marching cubes geometry
 		const geometry = generateGeometry();
 
-		// const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, wireframe: true });
-		// const material = new THREE.MeshBasicMaterial({ vertexColors: true });
+		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+		// const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, wireframe: true });
 		// const material = new THREE.MeshNormalMaterial();
-		// material.side = THREE.DoubleSide; // disable backface culling
 
 		const cube = new THREE.Mesh(geometry, material);
 		cube.scale.set(2, 2, 2);
@@ -74,7 +76,8 @@
 
 		// vanilla marching cubes
 		const effect = new MarchingCubes(resolution + 2, material, false, false, 100000);
-		effect.addBall(0.5, 0.5, 0.5, 14, 0);
+		effect.addBall(0.25, 0.25, 0.25, 9, 1);
+		effect.addBall(0.75, 0.75, 0.75, 9, 1);
 		effect.update();
 		effect.translateX(-2);
 		console.info('three vertices', effect.geometry.attributes.position.count);
@@ -122,6 +125,10 @@
 		};
 	});
 </script>
+
+<svelte:head>
+	<title>Marching cubes</title>
+</svelte:head>
 
 <canvas bind:this={canvas} class="absolute -z-10 block h-screen w-screen"></canvas>
 
