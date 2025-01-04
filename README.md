@@ -2,9 +2,12 @@
 
 A simple implementation of the marching cubes algorithm with meta balls in Rust and WebAssembly.
 
+> [!NOTE]  
+> Currently performance seems to be on par with the THREE.js implementation but there is still a lot of room for optimization.
+
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Once you've created a project and installed dependencies with `pnpm install`, start a development server:
 
 ```bash
 pnpm dev
