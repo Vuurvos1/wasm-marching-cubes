@@ -2,7 +2,7 @@
 	import * as THREE from 'three';
 	import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 	import { ViewportGizmo } from 'three-viewport-gizmo';
-	import { Pane, Slider } from 'svelte-tweakpane-ui';
+	import { List, Pane, Slider, type ListOptions } from 'svelte-tweakpane-ui';
 	import { marching_cubes, visualize_sdf, Metaball } from '$lib/wasm/marching_cubes/marching_cubes';
 	import { onMount } from 'svelte';
 
@@ -15,6 +15,23 @@
 
 	let ballSize = $state(0.5);
 	let ballStrength = $state(2.5);
+
+	type MaterialOptions = 'Lambert' | 'Normal' | 'Wireframe';
+	const materialOptions: ListOptions<MaterialOptions> = {
+		Lambert: 'Lambert',
+		Normal: 'Normal',
+		Wireframe: 'Wireframe'
+	};
+	let materialSelection = $state<MaterialOptions>('Lambert');
+
+	let meshMaterial = $derived.by(() => {
+		if (materialSelection === 'Normal') {
+			return new THREE.MeshNormalMaterial();
+		} else if (materialSelection === 'Wireframe') {
+			return new THREE.MeshLambertMaterial({ color: 0x00ff00, wireframe: true });
+		}
+		return new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+	});
 
 	let scene: THREE.Scene | undefined = $state();
 
@@ -58,10 +75,6 @@
 			new Metaball(-0.25, -0.25, -0.25, ballSize, ballStrength)
 		];
 
-		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-		// const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, wireframe: true });
-		// const material = new THREE.MeshNormalMaterial();
-
 		console.time('marching cubes');
 		const { vertices, indices, normals } = marching_cubes(resolution, balls, threshold);
 		console.timeEnd('marching cubes');
@@ -71,7 +84,7 @@
 		geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
 		console.log('vertices', vertices.length / 3);
 
-		const newCube = new THREE.Mesh(geometry, material);
+		const newCube = new THREE.Mesh(geometry, meshMaterial);
 		newCube.scale.set(2, 2, 2);
 		newCube.name = 'marchingCubes';
 
@@ -194,7 +207,9 @@
 		format={(v) => v.toFixed(2)}
 		label="Strength"
 		bind:value={ballStrength}
-	></Slider>
+	></Slider>`
+
+	<List options={materialOptions} bind:value={materialSelection} label="Material"></List>
 </Pane>
 
 <canvas bind:this={canvas} class="absolute -z-10 block h-screen w-screen"></canvas>
