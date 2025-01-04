@@ -1,5 +1,7 @@
 pub mod lookup_tables;
 
+use std::vec;
+
 use lookup_tables::{EDGE_CONNECTIONS, EDGE_TABLE, TRI_TABLE};
 use wasm_bindgen::prelude::*;
 
@@ -72,13 +74,31 @@ fn scalar_field(x: f32, y: f32, z: f32, metaballs: &Box<[Metaball]>) -> f32 {
 }
 
 #[wasm_bindgen]
-pub fn marching_cubes(resolution: i32, metaballs: Box<[Metaball]>, threshold: f32) -> GridData {
+pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: f32) -> GridData {
     let grid_size = 1.0 / resolution as f32;
-    let half_res = resolution / 2;
 
-    let mut vertices: Vec<f32> = Vec::new();
-    let mut indices = Vec::new();
-    let mut normals: Vec<f32> = Vec::new();
+    let mut vertices: Vec<f32> = Vec::with_capacity(resolution.pow(3) as usize * 3);
+    let mut indices = Vec::with_capacity(resolution.pow(3) as usize);
+    let mut normals: Vec<f32> = Vec::with_capacity(resolution.pow(3) as usize * 3);
+
+    let mut scalar_cache: Vec<Vec<Vec<f32>>> =
+        vec![
+            vec![vec![0.0; resolution as usize + 1]; resolution as usize + 1];
+            resolution as usize + 1
+        ];
+
+    for x in 0..resolution {
+        for y in 0..resolution {
+            for z in 0..resolution {
+                scalar_cache[x as usize][y as usize][z as usize] = scalar_field(
+                    x as f32 * grid_size - 0.5,
+                    y as f32 * grid_size - 0.5,
+                    z as f32 * grid_size - 0.5,
+                    &metaballs,
+                );
+            }
+        }
+    }
 
     let compute_gradient = |x: f32, y: f32, z: f32| -> (f32, f32, f32) {
         let delta = 0.001; // Step size for finite differences
@@ -96,58 +116,26 @@ pub fn marching_cubes(resolution: i32, metaballs: Box<[Metaball]>, threshold: f3
 
     let mut vertex_count = 0;
 
-    for x in -half_res..half_res {
-        for y in -half_res..half_res {
-            for z in -half_res..half_res {
+    for x in 0..resolution {
+        for y in 0..resolution {
+            for z in 0..resolution {
                 // Define the 8 corners of the cube
-                let corners: [(f32, f32, f32); 8] = [
-                    (
-                        x as f32 * grid_size,
-                        y as f32 * grid_size,
-                        z as f32 * grid_size,
-                    ),
-                    (
-                        (x + 1) as f32 * grid_size,
-                        y as f32 * grid_size,
-                        z as f32 * grid_size,
-                    ),
-                    (
-                        (x + 1) as f32 * grid_size,
-                        (y + 1) as f32 * grid_size,
-                        z as f32 * grid_size,
-                    ),
-                    (
-                        x as f32 * grid_size,
-                        (y + 1) as f32 * grid_size,
-                        z as f32 * grid_size,
-                    ),
-                    (
-                        x as f32 * grid_size,
-                        y as f32 * grid_size,
-                        (z + 1) as f32 * grid_size,
-                    ),
-                    (
-                        (x + 1) as f32 * grid_size,
-                        y as f32 * grid_size,
-                        (z + 1) as f32 * grid_size,
-                    ),
-                    (
-                        (x + 1) as f32 * grid_size,
-                        (y + 1) as f32 * grid_size,
-                        (z + 1) as f32 * grid_size,
-                    ),
-                    (
-                        x as f32 * grid_size,
-                        (y + 1) as f32 * grid_size,
-                        (z + 1) as f32 * grid_size,
-                    ),
+                let corners: [(usize, usize, usize); 8] = [
+                    (x, y, z),
+                    (x + 1, y, z),
+                    (x + 1, y + 1, z),
+                    (x, y + 1, z),
+                    (x, y, z + 1),
+                    (x + 1, y, z + 1),
+                    (x + 1, y + 1, z + 1),
+                    (x, y + 1, z + 1),
                 ];
 
                 // Compute scalar field values at corners
                 let mut corner_values = [0.0; 8];
                 for i in 0..8 {
-                    corner_values[i] =
-                        scalar_field(corners[i].0, corners[i].1, corners[i].2, &metaballs);
+                    let (cx, cy, cz) = corners[i];
+                    corner_values[i] = scalar_cache[cx][cy][cz];
                 }
 
                 // Determine cube index using the scalar field values
@@ -176,9 +164,9 @@ pub fn marching_cubes(resolution: i32, metaballs: Box<[Metaball]>, threshold: f3
 
                         let t = (threshold - val1) / (val2 - val1);
                         let interpolated = (
-                            p1.0 + t * (p2.0 - p1.0),
-                            p1.1 + t * (p2.1 - p1.1),
-                            p1.2 + t * (p2.2 - p1.2),
+                            (p1.0 as f32 + t * (p2.0 as f32 - p1.0 as f32)) * grid_size - 0.5,
+                            (p1.1 as f32 + t * (p2.1 as f32 - p1.1 as f32)) * grid_size - 0.5,
+                            (p1.2 as f32 + t * (p2.2 as f32 - p1.2 as f32)) * grid_size - 0.5,
                         );
 
                         edge_vertices[i] = Some(interpolated);
@@ -222,21 +210,20 @@ pub fn marching_cubes(resolution: i32, metaballs: Box<[Metaball]>, threshold: f3
 }
 
 #[wasm_bindgen]
-pub fn visualize_sdf(resolution: f32, metaballs: Box<[Metaball]>, threshold: f32) -> GridData {
+pub fn visualize_sdf(resolution: usize, metaballs: Box<[Metaball]>, threshold: f32) -> GridData {
+    // render a small quad with a vertex color based on the sdf value
+    let grid_size = 1.0 / resolution as f32;
+
     let mut vertices = Vec::new();
     let indices = Vec::new();
 
-    // render a small quad with a vertex color based on the sdf value
-    let grid_size = 1.0 / resolution as f32;
-    let half_res = (resolution / 2.0) as i32;
-
-    for x in -half_res..half_res {
-        for y in -half_res..half_res {
-            for z in -half_res..half_res {
+    for x in 0..resolution {
+        for y in 0..resolution {
+            for z in 0..resolution {
                 let sdf = scalar_field(
-                    x as f32 * grid_size,
-                    y as f32 * grid_size,
-                    z as f32 * grid_size,
+                    x as f32 * grid_size - 0.5,
+                    y as f32 * grid_size - 0.5,
+                    z as f32 * grid_size - 0.5,
                     &metaballs,
                 );
 
@@ -245,9 +232,9 @@ pub fn visualize_sdf(resolution: f32, metaballs: Box<[Metaball]>, threshold: f32
                 }
 
                 vertices.extend_from_slice(&[
-                    x as f32 * grid_size,
-                    y as f32 * grid_size,
-                    z as f32 * grid_size,
+                    x as f32 * grid_size - 0.5,
+                    y as f32 * grid_size - 0.5,
+                    z as f32 * grid_size - 0.5,
                 ]);
             }
         }

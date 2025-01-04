@@ -3,7 +3,7 @@
 A simple implementation of the marching cubes algorithm with meta balls in Rust and WebAssembly.
 
 > [!NOTE]  
-> Currently performance seems to be on par with the THREE.js implementation but there is still a lot of room for optimization.
+> Currently the performance WASM performance seems to be about 1.6x faster than the THREE.js implementation but there might be more room for optimization.
 
 ## Developing
 

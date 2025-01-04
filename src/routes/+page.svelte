@@ -56,6 +56,7 @@
 		const sdfMaterial = new THREE.PointsMaterial({ size: 0.02 });
 		const newSdfPoints = new THREE.Points(sdfGeometry, sdfMaterial);
 		newSdfPoints.name = 'sdfPoints';
+		newSdfPoints.scale.set(2, 2, 2);
 		newSdfPoints.translateX(2);
 
 		scene.add(newSdfPoints);
