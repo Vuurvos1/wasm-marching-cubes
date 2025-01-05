@@ -3,10 +3,18 @@
 	import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 	import { ViewportGizmo } from 'three-viewport-gizmo';
 	import { List, Pane, Slider, type ListOptions } from 'svelte-tweakpane-ui';
-	import { marching_cubes, visualize_sdf, Metaball } from '$lib/wasm/marching_cubes/marching_cubes';
 	import { onMount } from 'svelte';
 
 	import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
+
+	async function loadWasm() {
+		const { marching_cubes, visualize_sdf, Metaball } = await import(
+			'$lib/wasm/marching_cubes/marching_cubes'
+		);
+		return { marching_cubes, visualize_sdf, Metaball };
+	}
+
+	let wasm: Awaited<ReturnType<typeof loadWasm>> | undefined = $state();
 
 	let canvas: HTMLCanvasElement;
 
@@ -37,19 +45,19 @@
 
 	// visualize sdf
 	$effect(() => {
-		if (!scene) return;
+		if (!scene || !wasm) return;
 
 		const sdfPoints = scene.getObjectByName('sdfPoints');
 		if (sdfPoints) {
 			scene.remove(sdfPoints);
 		}
 
-		const balls: Metaball[] = [
-			new Metaball(0.25, 0.25, 0.25, ballSize, ballStrength),
-			new Metaball(-0.25, -0.25, -0.25, ballSize, ballStrength)
+		const balls = [
+			new wasm.Metaball(0.25, 0.25, 0.25, ballSize, ballStrength),
+			new wasm.Metaball(-0.25, -0.25, -0.25, ballSize, ballStrength)
 		];
 
-		const { vertices } = visualize_sdf(resolution, balls, threshold);
+		const { vertices } = wasm.visualize_sdf(resolution, balls, threshold);
 		const sdfGeometry = new THREE.BufferGeometry();
 		sdfGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3, false));
 
@@ -64,21 +72,21 @@
 
 	// marching cubes
 	$effect(() => {
-		if (!scene) return;
+		if (!scene || !wasm) return;
 
 		const cube = scene.getObjectByName('marchingCubes');
 		if (cube) {
 			scene.remove(cube);
 		}
 
-		const balls: Metaball[] = [
-			new Metaball(0.25, 0.25, 0.25, ballSize, ballStrength),
-			new Metaball(-0.25, -0.25, -0.25, ballSize, ballStrength)
+		const balls = [
+			new wasm.Metaball(0.25, 0.25, 0.25, ballSize, ballStrength),
+			new wasm.Metaball(-0.25, -0.25, -0.25, ballSize, ballStrength)
 		];
 
-		console.time('marching cubes');
-		const { vertices, indices, normals } = marching_cubes(resolution, balls, threshold);
-		console.timeEnd('marching cubes');
+		console.time('wasm marching cubes');
+		const { vertices, indices, normals } = wasm.marching_cubes(resolution, balls, threshold);
+		console.timeEnd('wasm marching cubes');
 		const geometry = new THREE.BufferGeometry();
 		geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3, false));
 		geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
@@ -93,6 +101,11 @@
 	});
 
 	onMount(() => {
+		async function load() {
+			wasm = await loadWasm();
+		}
+		load();
+
 		// Create the scene
 		scene = new THREE.Scene();
 		scene.background = new THREE.Color(0x333333);
@@ -120,10 +133,12 @@
 
 		// vanilla marching cubes
 		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+		console.time('three marching cubes');
 		const effect = new MarchingCubes(resolution + 2, material, false, false, 100000);
 		effect.addBall(0.25, 0.25, 0.25, 9, 1);
 		effect.addBall(0.75, 0.75, 0.75, 9, 1);
 		effect.update();
+		console.timeEnd('three marching cubes');
 		effect.translateX(-2);
 		console.info('three vertices', effect.geometry.attributes.position.count);
 		scene.add(effect);
@@ -213,7 +228,7 @@
 	<List options={materialOptions} bind:value={materialSelection} label="Material"></List>
 </Pane>
 
-<canvas bind:this={canvas} class="absolute -z-10 block h-screen w-screen"></canvas>
+<canvas bind:this={canvas} class="absolute block h-screen w-screen"></canvas>
 
 <div class="p-3 text-white">
 	<h1 class="font-semi-bold text-xl">WASM marching cubes</h1>
