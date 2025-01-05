@@ -6,7 +6,7 @@ import { marching_cubes, Metaball } from './src/lib/wasm/marching_cubes/marching
 const resolution = 48;
 
 bench('wasm marching cubes', () => {
-	const ball = new Metaball(0, 0, 0, 0.5, 1);
+	const ball = new Metaball(0.5, 0.5, 0.5, 9, 1);
 	marching_cubes(resolution, [ball]);
 });
 

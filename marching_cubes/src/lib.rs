@@ -91,9 +91,9 @@ pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: 
         for y in 0..resolution {
             for z in 0..resolution {
                 scalar_cache[x as usize][y as usize][z as usize] = scalar_field(
-                    x as f32 * grid_size - 0.5,
-                    y as f32 * grid_size - 0.5,
-                    z as f32 * grid_size - 0.5,
+                    x as f32 * grid_size,
+                    y as f32 * grid_size,
+                    z as f32 * grid_size,
                     &metaballs,
                 );
             }
@@ -164,9 +164,9 @@ pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: 
 
                         let t = (threshold - val1) / (val2 - val1);
                         let interpolated = (
-                            (p1.0 as f32 + t * (p2.0 as f32 - p1.0 as f32)) * grid_size - 0.5,
-                            (p1.1 as f32 + t * (p2.1 as f32 - p1.1 as f32)) * grid_size - 0.5,
-                            (p1.2 as f32 + t * (p2.2 as f32 - p1.2 as f32)) * grid_size - 0.5,
+                            (p1.0 as f32 + t * (p2.0 as f32 - p1.0 as f32)) * grid_size,
+                            (p1.1 as f32 + t * (p2.1 as f32 - p1.1 as f32)) * grid_size,
+                            (p1.2 as f32 + t * (p2.2 as f32 - p1.2 as f32)) * grid_size,
                         );
 
                         edge_vertices[i] = Some(interpolated);
@@ -216,9 +216,9 @@ pub fn visualize_sdf(resolution: usize, metaballs: Box<[Metaball]>, threshold: f
         for y in 0..resolution {
             for z in 0..resolution {
                 let sdf = scalar_field(
-                    x as f32 * grid_size - 0.5,
-                    y as f32 * grid_size - 0.5,
-                    z as f32 * grid_size - 0.5,
+                    x as f32 * grid_size,
+                    y as f32 * grid_size,
+                    z as f32 * grid_size,
                     &metaballs,
                 );
 
@@ -227,9 +227,9 @@ pub fn visualize_sdf(resolution: usize, metaballs: Box<[Metaball]>, threshold: f
                 }
 
                 vertices.extend_from_slice(&[
-                    x as f32 * grid_size - 0.5,
-                    y as f32 * grid_size - 0.5,
-                    z as f32 * grid_size - 0.5,
+                    x as f32 * grid_size,
+                    y as f32 * grid_size,
+                    z as f32 * grid_size,
                 ]);
             }
         }

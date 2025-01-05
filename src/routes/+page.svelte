@@ -54,7 +54,7 @@
 
 		const balls = [
 			new wasm.Metaball(0.25, 0.25, 0.25, ballSize, ballStrength),
-			new wasm.Metaball(-0.25, -0.25, -0.25, ballSize, ballStrength)
+			new wasm.Metaball(0.75, 0.75, 0.75, ballSize, ballStrength)
 		];
 
 		const { vertices } = wasm.visualize_sdf(resolution, balls, threshold);
@@ -66,6 +66,8 @@
 		newSdfPoints.name = 'sdfPoints';
 		newSdfPoints.scale.set(2, 2, 2);
 		newSdfPoints.translateX(2);
+		newSdfPoints.translateY(-1);
+		newSdfPoints.translateZ(-1);
 
 		scene.add(newSdfPoints);
 	});
@@ -81,7 +83,7 @@
 
 		const balls = [
 			new wasm.Metaball(0.25, 0.25, 0.25, ballSize, ballStrength),
-			new wasm.Metaball(-0.25, -0.25, -0.25, ballSize, ballStrength)
+			new wasm.Metaball(0.75, 0.75, 0.75, ballSize, ballStrength)
 		];
 
 		console.time('wasm marching cubes');
@@ -94,8 +96,11 @@
 		console.log('vertices', vertices.length / 3);
 
 		const newCube = new THREE.Mesh(geometry, meshMaterial);
-		newCube.scale.set(2, 2, 2);
 		newCube.name = 'marchingCubes';
+		newCube.scale.set(2, 2, 2);
+		newCube.translateX(-1);
+		newCube.translateY(-1);
+		newCube.translateZ(-1);
 
 		scene.add(newCube);
 	});
@@ -139,7 +144,7 @@
 		effect.addBall(0.75, 0.75, 0.75, 9, 1);
 		effect.update();
 		console.timeEnd('three marching cubes');
-		effect.translateX(-2);
+		effect.translateX(-3);
 		console.info('three vertices', effect.geometry.attributes.position.count);
 		scene.add(effect);
 
@@ -199,8 +204,8 @@
 	></Slider>
 
 	<Slider
-		min={-2}
-		max={2}
+		min={0}
+		max={3}
 		step={0.01}
 		format={(v) => v.toFixed(2)}
 		label="Threshold"
