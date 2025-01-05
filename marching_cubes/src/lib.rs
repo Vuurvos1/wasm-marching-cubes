@@ -78,7 +78,7 @@ pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: 
     let grid_size = 1.0 / resolution as f32;
 
     let mut vertices: Vec<f32> = Vec::with_capacity(resolution.pow(3) as usize * 3);
-    let mut indices = Vec::with_capacity(resolution.pow(3) as usize);
+    let mut indices: Vec<u32> = Vec::with_capacity(resolution.pow(3) as usize);
     let mut normals: Vec<f32> = Vec::with_capacity(resolution.pow(3) as usize * 3);
 
     let mut scalar_cache: Vec<Vec<Vec<f32>>> =
@@ -186,12 +186,7 @@ pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: 
                             vertices.extend_from_slice(&[vertex.0, vertex.1, vertex.2]);
 
                             let (nx, ny, nz) = compute_gradient(vertex.0, vertex.1, vertex.2);
-                            let magnitude = (nx * nx + ny * ny + nz * nz).sqrt();
-                            normals.extend_from_slice(&[
-                                nx / magnitude,
-                                ny / magnitude,
-                                nz / magnitude,
-                            ]);
+                            normals.extend_from_slice(&[nx, ny, nz]);
                         }
                     }
 
