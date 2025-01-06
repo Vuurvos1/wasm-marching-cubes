@@ -1,6 +1,6 @@
 pub mod lookup_tables;
 
-use std::vec;
+use std::{collections::HashMap, vec};
 
 use lookup_tables::{EDGE_CONNECTIONS, EDGE_TABLE, TRI_TABLE};
 use wasm_bindgen::prelude::*;
@@ -87,6 +87,9 @@ pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: 
             resolution as usize + 1
         ];
 
+    // Cache for computed vertex indices
+    let mut edge_to_vertex: HashMap<(usize, usize, usize, usize), u32> = HashMap::new();
+
     for x in 0..resolution {
         for y in 0..resolution {
             for z in 0..resolution {
@@ -162,6 +165,18 @@ pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: 
                         let val1 = corner_values[v1];
                         let val2 = corner_values[v2];
 
+                        let key = (
+                            x.min(p1.0).min(p2.0),
+                            y.min(p1.1).min(p2.1),
+                            z.min(p1.2).min(p2.2),
+                            i,
+                        );
+
+                        if let Some(&vertex_index) = edge_to_vertex.get(&key) {
+                            edge_vertices[i] = Some(vertex_index);
+                            continue;
+                        }
+
                         let t = (threshold - val1) / (val2 - val1);
                         let interpolated = (
                             (p1.0 as f32 + t * (p2.0 as f32 - p1.0 as f32)) * grid_size,
@@ -169,7 +184,18 @@ pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: 
                             (p1.2 as f32 + t * (p2.2 as f32 - p1.2 as f32)) * grid_size,
                         );
 
-                        edge_vertices[i] = Some(interpolated);
+                        vertices.extend_from_slice(&[
+                            interpolated.0,
+                            interpolated.1,
+                            interpolated.2,
+                        ]);
+                        let (nx, ny, nz) =
+                            compute_gradient(interpolated.0, interpolated.1, interpolated.2);
+                        normals.extend_from_slice(&[nx, ny, nz]);
+
+                        edge_to_vertex.insert(key, vertex_count);
+                        edge_vertices[i] = Some(vertex_count);
+                        vertex_count += 1;
                     }
                 }
 
@@ -181,17 +207,11 @@ pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: 
                         break;
                     }
 
-                    for &edge_index in tri {
-                        if let Some(vertex) = edge_vertices[edge_index as usize] {
-                            vertices.extend_from_slice(&[vertex.0, vertex.1, vertex.2]);
-
-                            let (nx, ny, nz) = compute_gradient(vertex.0, vertex.1, vertex.2);
-                            normals.extend_from_slice(&[nx, ny, nz]);
-                        }
-                    }
-
-                    indices.extend_from_slice(&[vertex_count + 2, vertex_count + 1, vertex_count]);
-                    vertex_count += 3;
+                    indices.extend_from_slice(&[
+                        edge_vertices[tri[2] as usize].unwrap(),
+                        edge_vertices[tri[1] as usize].unwrap(),
+                        edge_vertices[tri[0] as usize].unwrap(),
+                    ]);
                 }
             }
         }
@@ -206,7 +226,7 @@ pub fn marching_cubes(resolution: usize, metaballs: Box<[Metaball]>, threshold: 
 
 #[wasm_bindgen]
 pub fn visualize_sdf(resolution: usize, metaballs: Box<[Metaball]>, threshold: f32) -> GridData {
-    // render a small quad with a vertex color based on the sdf value
+    // Create a grid of points and evaluate the scalar field at each point
     let grid_size = 1.0 / resolution as f32;
 
     let mut vertices = Vec::new();

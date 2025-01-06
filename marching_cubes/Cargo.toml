@@ -11,5 +11,4 @@ lto = true
 strip = true
 
 [dependencies]
-getrandom = { version = "0.2", features = ["js"] }
 wasm-bindgen = "0.2.99"

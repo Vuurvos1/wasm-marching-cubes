@@ -95,6 +95,8 @@
 		geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
 		console.log('vertices', vertices.length / 3);
 
+		// geometry.computeVertexNormals();
+
 		const newCube = new THREE.Mesh(geometry, meshMaterial);
 		newCube.name = 'marchingCubes';
 		newCube.scale.set(2, 2, 2);
