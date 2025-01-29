@@ -73,6 +73,7 @@
 	});
 
 	// marching cubes
+	const geometry = new THREE.BufferGeometry();
 	$effect(() => {
 		if (!scene || !wasm) return;
 
@@ -89,7 +90,6 @@
 		console.time('wasm marching cubes');
 		const { vertices, indices, normals } = wasm.marching_cubes(resolution, balls, threshold);
 		console.timeEnd('wasm marching cubes');
-		const geometry = new THREE.BufferGeometry();
 		geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3, false));
 		geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
 		geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
